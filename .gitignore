@@ -7,3 +7,4 @@ chat_client
 # Папки сборки
 build/
 .vscode/
+.cache/
