@@ -1,0 +1,9 @@
+# Бинарники
+chat_server
+chat_client
+*.o
+*.exe
+
+# Папки сборки
+build/
+.vscode/
