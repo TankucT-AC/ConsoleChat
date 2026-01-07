@@ -7,4 +7,9 @@ chat_client
 # Папки сборки
 build/
 .vscode/
+
+# Кеш анализатора кода
 .cache/
+
+# Библиотеки
+websocketpp/
