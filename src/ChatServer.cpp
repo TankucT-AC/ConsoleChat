@@ -1,4 +1,5 @@
 #include "ChatServer.hpp"
+#include "websocketpp/common/system_error.hpp"
 #include <mutex>
 
 ChatServer::ChatServer()
@@ -22,6 +23,14 @@ void ChatServer::on_open(connection_hdl hdl)
     std::lock_guard<std::mutex> lock(server_mutex);
     user_list.insert(hdl);
     std::cout << "Подключился новый пользователь. Всего: " << user_list.size() << std::endl;
+
+    websocketpp::lib::error_code ec;
+    chat_server.send(hdl, db.get_history_json(10), websocketpp::frame::opcode::text, ec);
+
+    if (ec)
+    {
+        std::cout << "Ошибка отправки истории сообщения: " << ec.message() << std::endl;
+    }
 }
 
 void ChatServer::on_close(connection_hdl hdl)
@@ -34,6 +43,8 @@ void ChatServer::on_close(connection_hdl hdl)
 void ChatServer::on_message(connection_hdl hdl, server::message_ptr msg)
 {
     std::lock_guard<std::mutex> lock(server_mutex);
+    // Сохраняем сообщение в базе данных
+    db.insert_message(msg->get_payload());
     for (auto it : user_list)
     {
         // Проверка на то, что мы 

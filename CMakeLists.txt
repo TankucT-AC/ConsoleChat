@@ -5,6 +5,7 @@ project(WebSocketServer)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(SQLite3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(nlohmann_json REQUIRED)
 
@@ -15,11 +16,13 @@ include_directories(${Boost_INCLUDE_DIRS})
 set(SOURCES
     src/server_main.cpp
     src/ChatServer.cpp
+    src/DataManager.cpp
 )
 
 set(HEADERS
     include/ChatServer.hpp
     include/config.hpp
+    include/DataManager.hpp
 )
 
 # --- СЕРВЕР ---
@@ -31,6 +34,7 @@ target_include_directories(my_server PRIVATE
 
 target_link_libraries(my_server PRIVATE 
     nlohmann_json::nlohmann_json
+    SQLite::SQLite3
     ${Boost_LIBRARIES} 
     pthread
 )

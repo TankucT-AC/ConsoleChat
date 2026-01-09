@@ -10,14 +10,28 @@ ChatClient::ChatClient(std::string nickname) : nickname(nickname)
     user_client.init_asio();
     user_client.set_message_handler([this](connection_hdl, client::message_ptr msg) {
         auto json_msg = nlohmann::json::parse(msg->get_payload());
-        if (json_msg["type"] != "message") return;
+        if (json_msg["type"] == "message")
+        {
+            std::cout << "\r\033[2K" << std::flush;
 
-        std::cout << "\r\033[2K" << std::flush;
+            std::cout << "[" << json_msg.value("nickname", "unknown") << "]: " 
+                    << json_msg.value("text", "") << std::endl;
 
-        std::cout << "[" << json_msg.value("nickname", "unknown") << "]: " 
-                  << json_msg.value("text", "") << std::endl;
+            std::cout << "> " << std::flush;
+        }
 
-        std::cout << "> " << std::flush;
+        if (json_msg["type"] == "history")
+        {
+            std::cout << "\r\033[2K" << std::flush;
+            for (const auto& it : json_msg["messages"])
+            {
+                std::cout << "[" << it.value("nickname", "unknown") << "]: " 
+                    << it.value("text", "") << std::endl;
+            }
+
+            std::cout << "---------------------------" << std::endl;
+            std::cout << "> " << std::flush;
+        }
     });
 
     user_client.set_open_handler([this](connection_hdl hdl) {
