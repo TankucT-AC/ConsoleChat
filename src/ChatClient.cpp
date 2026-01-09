@@ -1,4 +1,5 @@
 #include "ChatClient.hpp"
+#include "ChatErrors.hpp"
 #include "websocketpp/common/connection_hdl.hpp"
 #include "websocketpp/common/system_error.hpp"
 #include <nlohmann/json.hpp>
@@ -47,14 +48,26 @@ void ChatClient::connect(const std::string &uri)
     websocketpp::lib::error_code ec;
     auto con = user_client.get_connection(uri, ec);
 
-    if (ec)
-    {
-        std::cout << "Ошибка: " << ec.message() << std::endl;
-        return;
-    }
+    if (ec) throw chat_errors::NetworkError(chat_errors::CONNECT_ERROR);
 
     user_client.connect(con);
-    user_thread = std::thread([this]() { user_client.run(); }); // Запускаем клиент на отдельном потоке. 
+    user_thread = std::thread([this]() {
+        try {
+            user_client.run(); 
+        } catch (const chat_errors::NetworkError& e)
+        {
+            auto err = e.what();
+            std::cerr << err << std::endl;
+        } catch (const nlohmann::json::exception& e)
+        {
+            auto err = e.what();
+            std::cerr << err << std::endl;
+        } catch (...)
+        {
+            std::cerr << chat_errors::UNKNOWN_ERROR << std::endl;
+            user_client.stop();
+        }
+    });
 }
 
 void ChatClient::send(const std::string& msg)
@@ -68,9 +81,8 @@ void ChatClient::send(const std::string& msg)
     json_msg["text"] = msg;
 
     user_client.send(user_hdl, json_msg.dump(), websocketpp::frame::opcode::text, ec);
-    if (ec) {
-        std::cout << "Ошибка отправки: " << ec.message() << std::endl;
-    }
+
+    if (ec) throw chat_errors::NetworkError(chat_errors::SEND_ERROR);
 }
 
 ChatClient::~ChatClient()

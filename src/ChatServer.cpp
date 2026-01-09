@@ -1,10 +1,13 @@
 #include "ChatServer.hpp"
+#include "ChatErrors.hpp"
+#include "config.hpp"
 #include "websocketpp/common/system_error.hpp"
+#include <nlohmann/json.hpp>
 #include <mutex>
 
 ChatServer::ChatServer()
 {
-    chat_server.set_pong_timeout(5000);
+    chat_server.set_pong_timeout(my_config::TIMEOUT);
     chat_server.init_asio();
 
     chat_server.set_open_handler(bind(&ChatServer::on_open, this, std::placeholders::_1));
@@ -25,12 +28,9 @@ void ChatServer::on_open(connection_hdl hdl)
     std::cout << "Подключился новый пользователь. Всего: " << user_list.size() << std::endl;
 
     websocketpp::lib::error_code ec;
-    chat_server.send(hdl, db.get_history_json(10), websocketpp::frame::opcode::text, ec);
+    chat_server.send(hdl, db.get_history_json(my_config::HISTORY_LIMIT), websocketpp::frame::opcode::text, ec);
 
-    if (ec)
-    {
-        std::cout << "Ошибка отправки истории сообщения: " << ec.message() << std::endl;
-    }
+    if (ec) throw chat_errors::NetworkError(chat_errors::CONNECT_ERROR);
 }
 
 void ChatServer::on_close(connection_hdl hdl)
@@ -54,10 +54,7 @@ void ChatServer::on_message(connection_hdl hdl, server::message_ptr msg)
             websocketpp::lib::error_code ec;
             chat_server.send(it, msg->get_payload(), msg->get_opcode());
 
-            if (ec)
-            {
-                std::cout << "Ошибка на стороне клиента: " << ec.message() << std::endl;
-            }
+            if (ec) throw chat_errors::NetworkError(chat_errors::SEND_ERROR);
         }
     }
 }
@@ -67,5 +64,30 @@ void ChatServer::run(const uint16_t port)
     chat_server.listen(port);
     chat_server.start_accept();
     std::cout << "Сервер успешно запущен на порту: " << port << std::endl;
-    server_thread = std::thread([this]() { chat_server.run(); });
+    server_thread = std::thread([this]() {
+        try 
+        {
+            chat_server.run();
+        }
+        catch (const chat_errors::DatabaseError& e)
+        {
+            auto err = e.error_msg;
+            std::cerr << e.what() << std::endl;
+            if (err == chat_errors::EXECUTE_INSERT_ERROR || 
+                err == chat_errors::PREPARE_INSERT_ERROR)
+                chat_server.stop();
+        } catch (const chat_errors::NetworkError& e)
+        {
+            auto err = e.what();
+            std::cerr << err << std::endl;
+        } catch (const nlohmann::json::exception& e)
+        {
+            auto err = e.what();
+            std::cerr << err << std::endl;
+        } catch (...)
+        {
+            std::cerr << chat_errors::UNKNOWN_ERROR << std::endl;
+            chat_server.stop();
+        }
+    });
 }

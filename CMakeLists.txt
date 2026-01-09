@@ -23,6 +23,7 @@ set(HEADERS
     include/ChatServer.hpp
     include/config.hpp
     include/DataManager.hpp
+    include/ChatErrors.hpp
 )
 
 # --- СЕРВЕР ---
@@ -45,6 +46,7 @@ add_executable(my_client
     src/client_main.cpp
     include/ChatClient.hpp
     include/config.hpp
+    include/ChatErrors.hpp
 )
 
 target_include_directories(my_client PRIVATE 
