@@ -7,9 +7,13 @@ chat_client
 # Папки сборки
 build/
 .vscode/
+out/
 
 # Кеш анализатора кода
 .cache/
 
-# Библиотеки
-websocketpp/
+# Базы данных
+*.db
+
+# Прессеты сборки
+CMakePresets.json
